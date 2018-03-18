@@ -1,16 +1,19 @@
 package stemmer
 
-import "testing"
-import "bufio"
-import "strings"
-import "os"
+import (
+	"bufio"
+	"bytes"
+	"io/ioutil"
+	"os"
+	"strings"
+	"testing"
+)
 
 func compare(t *testing.T, expected, actual interface{}, msg ...string) {
 	if expected != actual {
 		t.Errorf("[%v] -- value differs. Expected [%v], actual [%v]", msg, expected, actual)
 	}
 }
-
 
 func TestConsonant(t *testing.T) {
 	word := []byte("TOY")
@@ -159,5 +162,25 @@ func TestVocal(t *testing.T) {
 			panic(err)
 		}
 		compare(t, strings.TrimSpace(string(stem)), string(Stem(word)), string(word))
+	}
+}
+
+func readLines(path string) [][]byte {
+	b, err := ioutil.ReadFile(path)
+	if err != nil {
+		panic(err)
+	}
+	return bytes.Split(b, []byte("\n"))
+}
+
+func BenchmarkVocal(b *testing.B) {
+	in := readLines("in.txt")
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < len(in); j++ {
+			_ = Stem(in[j])
+		}
 	}
 }
