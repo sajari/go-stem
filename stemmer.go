@@ -340,8 +340,9 @@ func five_b(body []byte) []byte {
 	return body
 }
 
-func Stem(body []byte) []byte {
-	word := bytes.TrimSpace(bytes.ToLower(body))
+// Stem computes the stemmed version of a single word, assumed to be lowercase and not
+// contain trailing/leading whitespace.
+func Stem(word []byte) []byte {
 	if len(word) > 2 {
 		return five_b(five_a(four(three(two(one_c(one_b(one_a(word))))))))
 	}
