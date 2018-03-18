@@ -2,21 +2,21 @@ package stemmer
 
 import "bytes"
 
-func Consonant(body []byte, offset int) bool {
+func Vowel(body []byte, offset int) bool {
 	switch body[offset] {
-	case 'A', 'E', 'I', 'O', 'U', 'a', 'e', 'i', 'o', 'u':
-		return false
-	case 'Y', 'y':
+	case 'a', 'e', 'i', 'o', 'u':
+		return true
+	case 'y':
 		if offset == 0 {
-			return true
+			return false
 		}
-		return offset > 0 && !Consonant(body, offset-1)
+		return offset > 0 && !Vowel(body, offset-1)
 	}
-	return true
+	return false
 }
 
-func Vowel(body []byte, offset int) bool {
-	return !Consonant(body, offset)
+func Consonant(body []byte, offset int) bool {
+	return !Vowel(body, offset)
 }
 
 const (
