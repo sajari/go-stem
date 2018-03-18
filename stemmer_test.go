@@ -1,180 +1,246 @@
 package stemmer
 
 import (
-	"bufio"
 	"bytes"
 	"io/ioutil"
-	"os"
-	"strings"
+	"strconv"
 	"testing"
 )
 
-func compare(t *testing.T, expected, actual interface{}, msg ...string) {
-	if expected != actual {
-		t.Errorf("[%v] -- value differs. Expected [%v], actual [%v]", msg, expected, actual)
-	}
-}
-
 func TestConsonant(t *testing.T) {
-	word := []byte("TOY")
-	compare(t, true, Consonant(word, 0), "T")  //T
-	compare(t, false, Consonant(word, 1), "O") //O
-	compare(t, true, Consonant(word, 2), "Y")  //Y
-	word = []byte("SYZYGY")
-	compare(t, true, Consonant(word, 0), "S")  //S
-	compare(t, false, Consonant(word, 1), "Y") //Y
-	compare(t, true, Consonant(word, 2), "Z")  //Z
-	compare(t, false, Consonant(word, 3), "Y") //Y
-	compare(t, true, Consonant(word, 4), "G")  //G
-	compare(t, false, Consonant(word, 5), "Y") //Y
-	word = []byte("yoke")
-	compare(t, true, Consonant(word, 0), "YOKE")
+	tests := []struct {
+		word      string
+		consonant []bool // value for each index of word
+	}{
+		{
+			"toy",
+			[]bool{true, false, true},
+		},
+		{
+			"syzygy",
+			[]bool{true, false, true, false, true, false},
+		},
+		{
+			"yoke",
+			[]bool{true, false, true, false},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.word, func(t *testing.T) {
+			if len(test.word) != len(test.consonant) {
+				t.Errorf("len(word) != len(consonant)")
+			}
+			for i, expected := range test.consonant {
+				t.Run(strconv.Itoa(i), func(t *testing.T) {
+					if got := Consonant([]byte(test.word), i); got != expected {
+						t.Errorf(" = %v, expected %v", got, expected)
+					}
+				})
+			}
+		})
+	}
 }
 
 func TestMeasure(t *testing.T) {
-	compare(t, 0, Measure([]byte("TR")))
-	compare(t, 0, Measure([]byte("EE")))
-	compare(t, 0, Measure([]byte("TREE")))
-	compare(t, 0, Measure([]byte("Y")))
-	compare(t, 0, Measure([]byte("BY")))
-	compare(t, 1, Measure([]byte("TROUBLE")))
-	compare(t, 1, Measure([]byte("OATS")))
-	compare(t, 1, Measure([]byte("TREES")))
-	compare(t, 1, Measure([]byte("IVY")))
-	compare(t, 2, Measure([]byte("TROUBLES")))
-	compare(t, 2, Measure([]byte("PRIVATE")))
-	compare(t, 2, Measure([]byte("OATEN")))
-	compare(t, 2, Measure([]byte("ORRERY")))
+	tests := []struct {
+		in  string
+		out int
+	}{
+		{"tr", 0},
+		{"ee", 0},
+		{"tree", 0},
+		{"y", 0},
+		{"by", 0},
+		{"trouble", 1},
+		{"oats", 1},
+		{"trees", 1},
+		{"ivy", 1},
+		{"troubles", 2},
+		{"private", 2},
+		{"oaten", 2},
+		{"orrery", 2},
+	}
+
+	for _, test := range tests {
+		t.Run(test.in, func(t *testing.T) {
+			if got := Measure([]byte(test.in)); got != test.out {
+				t.Errorf(" = %d, expected %d", got, test.out)
+			}
+		})
+	}
 }
 
-func Test1A(t *testing.T) {
-	compare(t, "caress", string(one_a([]byte("caresses"))))
-	compare(t, "poni", string(one_a([]byte("ponies"))))
-	compare(t, "ti", string(one_a([]byte("ties"))))
-	compare(t, "caress", string(one_a([]byte("caress"))))
-	compare(t, "cat", string(one_a([]byte("cats"))))
-}
+func TestAll(t *testing.T) {
+	type pair struct{ in, out string }
+	tests := []struct {
+		name   string
+		fn     func([]byte) []byte
+		params []pair
+	}{
+		{
+			name: "one_a",
+			fn:   one_a,
+			params: []pair{
+				{"caresses", "caress"},
+				{"ponies", "poni"},
+				{"ties", "ti"},
+				{"caress", "caress"},
+				{"cats", "cat"},
+			},
+		},
+		{
+			name: "one_b",
+			fn:   one_b,
+			params: []pair{
+				{"feed", "feed"},
+				{"agreed", "agree"},
+				{"plastered", "plaster"},
+				{"bled", "bled"},
+				{"motoring", "motor"},
+				{"sing", "sing"},
+				{"motoring", "motor"},
+				{"conflated", "conflate"},
+				{"troubled", "trouble"},
+				{"sized", "size"},
+				{"hopping", "hop"},
+				{"tanned", "tan"},
+				{"failing", "fail"},
+				{"filing", "file"},
+			},
+		},
+		{
+			name: "one_c",
+			fn:   one_c,
+			params: []pair{
+				{"sky", "sky"},
+				{"happy", "happi"},
+			},
+		},
+		{
+			name: "two",
+			fn:   two,
+			params: []pair{
+				{"relational", "relate"},
+				{"conditional", "condition"},
+				{"rational", "rational"},
+				{"valenci", "valence"},
+				{"hesitanci", "hesitance"},
+				{"digitizer", "digitize"},
+				{"conformabli", "conformable"},
+				{"radicalli", "radical"},
+				{"differentli", "different"},
+				{"vileli", "vile"},
+				{"analogousli", "analogous"},
+				{"vietnamization", "vietnamize"},
+				{"predication", "predicate"},
+				{"operator", "operate"},
+				{"feudalism", "feudal"},
+				{"decisiveness", "decisive"},
+				{"hopefulness", "hopeful"},
+				{"callousness", "callous"},
+				{"formaliti", "formal"},
+				{"sensitiviti", "sensitive"},
+				{"sensibiliti", "sensible"},
+			},
+		},
+		{
+			name: "three",
+			fn:   three,
+			params: []pair{
+				{"triplicate", "triplic"},
+				{"formative", "form"},
+				{"formalize", "formal"},
+				{"electriciti", "electric"},
+				{"electrical", "electric"},
+				{"hopeful", "hope"},
+				{"goodness", "good"},
+			},
+		},
+		{
+			name: "four",
+			fn:   four,
+			params: []pair{
+				{"revival", "reviv"},
+				{"allowance", "allow"},
+				{"inference", "infer"},
+				{"airliner", "airlin"},
+				{"gyroscopic", "gyroscop"},
+				{"adjustable", "adjust"},
+				{"defensible", "defens"},
+				{"irritant", "irrit"},
+				{"replacement", "replac"},
+				{"adjustment", "adjust"},
+				{"dependent", "depend"},
+				{"adoption", "adopt"},
+				{"homologou", "homolog"},
+				{"communism", "commun"},
+				{"activate", "activ"},
+				{"angulariti", "angular"},
+				{"homologous", "homolog"},
+				{"effective", "effect"},
+				{"bowdlerize", "bowdler"},
+			},
+		},
+		{
+			name: "five_a",
+			fn:   five_a,
+			params: []pair{
+				{"probate", "probat"},
+				{"rate", "rate"},
+				{"cease", "ceas"},
+			},
+		},
+		{
+			name: "five_b",
+			fn:   five_b,
+			params: []pair{
+				{"controll", "control"},
+				{"roll", "roll"},
+			},
+		},
+	}
 
-func Test1B(t *testing.T) {
-	compare(t, "feed", string(one_b([]byte("feed"))))
-	compare(t, "agree", string(one_b([]byte("agreed"))))
-	compare(t, "plaster", string(one_b([]byte("plastered"))))
-	compare(t, "bled", string(one_b([]byte("bled"))))
-	compare(t, "motor", string(one_b([]byte("motoring"))))
-	compare(t, "sing", string(one_b([]byte("sing"))))
-	compare(t, "motor", string(one_b([]byte("motoring"))))
-	compare(t, "conflate", string(one_b([]byte("conflated"))))
-	compare(t, "trouble", string(one_b([]byte("troubled"))))
-	compare(t, "size", string(one_b([]byte("sized"))))
-	compare(t, "hop", string(one_b([]byte("hopping"))))
-	compare(t, "tan", string(one_b([]byte("tanned"))))
-	compare(t, "fail", string(one_b([]byte("failing"))))
-	compare(t, "file", string(one_b([]byte("filing"))))
-}
-
-func Test1C(t *testing.T) {
-	compare(t, "sky", string(one_c([]byte("sky"))))
-	compare(t, "happi", string(one_c([]byte("happy"))))
-
-}
-
-func Test2(t *testing.T) {
-	compare(t, "relate", string(two([]byte("relational"))))
-	compare(t, "condition", string(two([]byte("conditional"))))
-	compare(t, "rational", string(two([]byte("rational"))))
-	compare(t, "valence", string(two([]byte("valenci"))))
-	compare(t, "hesitance", string(two([]byte("hesitanci"))))
-	compare(t, "digitize", string(two([]byte("digitizer"))))
-	compare(t, "conformable", string(two([]byte("conformabli"))))
-	compare(t, "radical", string(two([]byte("radicalli"))))
-	compare(t, "different", string(two([]byte("differentli"))))
-	compare(t, "vile", string(two([]byte("vileli"))))
-	compare(t, "analogous", string(two([]byte("analogousli"))))
-	compare(t, "vietnamize", string(two([]byte("vietnamization"))))
-	compare(t, "predicate", string(two([]byte("predication"))))
-	compare(t, "operate", string(two([]byte("operator"))))
-	compare(t, "feudal", string(two([]byte("feudalism"))))
-	compare(t, "decisive", string(two([]byte("decisiveness"))))
-	compare(t, "hopeful", string(two([]byte("hopefulness"))))
-	compare(t, "callous", string(two([]byte("callousness"))))
-	compare(t, "formal", string(two([]byte("formaliti"))))
-	compare(t, "sensitive", string(two([]byte("sensitiviti"))))
-	compare(t, "sensible", string(two([]byte("sensibiliti"))))
-}
-
-func Test3(t *testing.T) {
-	compare(t, "triplic", string(three([]byte("triplicate"))))
-	compare(t, "form", string(three([]byte("formative"))))
-	compare(t, "formal", string(three([]byte("formalize"))))
-	compare(t, "electric", string(three([]byte("electriciti"))))
-	compare(t, "electric", string(three([]byte("electrical"))))
-	compare(t, "hope", string(three([]byte("hopeful"))))
-	compare(t, "good", string(three([]byte("goodness"))))
-}
-
-func Test4(t *testing.T) {
-	compare(t, "reviv", string(four([]byte("revival"))))
-	compare(t, "allow", string(four([]byte("allowance"))))
-	compare(t, "infer", string(four([]byte("inference"))))
-	compare(t, "airlin", string(four([]byte("airliner"))))
-	compare(t, "gyroscop", string(four([]byte("gyroscopic"))))
-	compare(t, "adjust", string(four([]byte("adjustable"))))
-	compare(t, "defens", string(four([]byte("defensible"))))
-	compare(t, "irrit", string(four([]byte("irritant"))))
-	compare(t, "replac", string(four([]byte("replacement"))))
-	compare(t, "adjust", string(four([]byte("adjustment"))))
-	compare(t, "depend", string(four([]byte("dependent"))))
-	compare(t, "adopt", string(four([]byte("adoption"))))
-	compare(t, "homolog", string(four([]byte("homologou"))))
-	compare(t, "commun", string(four([]byte("communism"))))
-	compare(t, "activ", string(four([]byte("activate"))))
-	compare(t, "angular", string(four([]byte("angulariti"))))
-	compare(t, "homolog", string(four([]byte("homologous"))))
-	compare(t, "effect", string(four([]byte("effective"))))
-	compare(t, "bowdler", string(four([]byte("bowdlerize"))))
-}
-
-func Test5A(t *testing.T) {
-	compare(t, "probat", string(five_a([]byte("probate"))))
-	compare(t, "rate", string(five_a([]byte("rate"))))
-	compare(t, "ceas", string(five_a([]byte("cease"))))
-}
-
-func Test5B(t *testing.T) {
-	compare(t, "control", string(five_b([]byte("controll"))))
-	compare(t, "roll", string(five_b([]byte("roll"))))
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			for _, param := range test.params {
+				t.Run(param.in, func(t *testing.T) {
+					if got := string(test.fn([]byte(param.in))); got != param.out {
+						t.Errorf(" = %q, expected %q", param.in, param.out)
+					}
+				})
+			}
+		})
+	}
 }
 
 func TestVocal(t *testing.T) {
-	f, err := os.Open("in.txt")
-	if err != nil {
-		panic(err)
-	}
-	in := bufio.NewReader(f)
-	f, err = os.Open("out.txt")
-	if err != nil {
-		panic(err)
-	}
-	out := bufio.NewReader(f)
-	for word, err := in.ReadSlice('\n'); err == nil; word, err = in.ReadSlice('\n') {
-		stem, err := out.ReadSlice('\n')
-		if err != nil {
-			panic(err)
-		}
-		compare(t, strings.TrimSpace(string(stem)), string(Stem(word)), string(word))
+	in := readLines(t, "in.txt")
+	out := readLines(t, "out.txt")
+
+	for i, x := range in {
+		t.Run(string(x), func(t *testing.T) {
+			if got := Stem(x); !bytes.Equal(got, out[i]) {
+				t.Errorf(" = %q, expected %q", got, out[i])
+			}
+		})
 	}
 }
 
-func readLines(path string) [][]byte {
+type fataler interface {
+	Fatalf(string, ...interface{})
+}
+
+func readLines(f fataler, path string) [][]byte {
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
-		panic(err)
+		f.Fatalf("unexpected error opening file: %v", err)
 	}
 	return bytes.Split(b, []byte("\n"))
 }
 
 func BenchmarkVocal(b *testing.B) {
-	in := readLines("in.txt")
+	in := readLines(b, "in.txt")
 
 	b.ResetTimer()
 
