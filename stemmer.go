@@ -1,11 +1,6 @@
 package stemmer
 
-import "fmt"
 import "bytes"
-
-func ingore() {
-	fmt.Sprintf("")
-}
 
 func Consonant(body []byte, offset int) bool {
 	switch body[offset] {
