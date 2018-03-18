@@ -25,24 +25,22 @@ const (
 )
 
 func Measure(body []byte) int {
-	meansure := 0
-	if len(body) > 0 {
-		var state int
-		if Vowel(body, 0) {
-			state = vowel_state
-		} else {
-			state = consonant_state
-		}
-		for i := 0; i < len(body); i++ {
-			if Vowel(body, i) && state == consonant_state {
-				state = vowel_state
-			} else if Consonant(body, i) && state == vowel_state {
-				state = consonant_state
-				meansure++
-			}
+	if len(body) == 0 {
+		return 0
+	}
+
+	n := 0
+	v := Vowel(body, 0)
+	for i := 0; i < len(body); i++ {
+		c := !Vowel(body, i)
+		if !c && !v {
+			v = true
+		} else if c && v {
+			v = false
+			n++
 		}
 	}
-	return meansure
+	return n
 }
 
 func hasVowel(body []byte) bool {
